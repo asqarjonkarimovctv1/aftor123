@@ -121,7 +121,7 @@
       INVALID_REQUEST: "Samplecut so'rovni qabul qilmadi.",
       UNSUPPORTED_URL: "Samplecut bu havolani qo'llab-quvvatlamaydi.",
       SET_NOT_TRACK: "Playlist emas, bitta video havolasini kiriting.",
-      TOO_LONG: "Video Samplecut'ning 60 daqiqalik limitidan uzun.",
+      TOO_LONG: "Samplecut bu videoni davomiylik cheklovi sabab qabul qilmadi. Qisqaroq video havolasini sinab ko'ring.",
       EXTRACT_FAILED: "Video yopiq, o'chirilgan yoki hududiy cheklangan bo'lishi mumkin.",
       DRM: "DRM bilan himoyalangan audioni yuklab bo'lmaydi.",
       PREVIEW_ONLY: "Samplecut faqat qisqa preview oldi, to'liq audio mavjud emas.",

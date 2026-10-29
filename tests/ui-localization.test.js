@@ -7,6 +7,7 @@ const path = require("path");
 const root = path.join(__dirname, "..");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const appSource = fs.readFileSync(path.join(root, "js", "app.js"), "utf8");
+const utilsSource = fs.readFileSync(path.join(root, "js", "utils.js"), "utf8");
 const cssSource = fs.readFileSync(path.join(root, "css", "styles.css"), "utf8");
 
 assert.match(html, /<html lang="uz">/);
@@ -25,6 +26,8 @@ assert.match(cssSource, /@keyframes progress-indeterminate/);
 assert.match(cssSource, /\.folder-button:hover/);
 assert.match(cssSource, /border: 1px solid #414141/);
 assert.match(appSource, /getHistory\(\)\.slice\(0, 5\)/);
+assert.match(utilsSource, /Samplecut bu videoni davomiylik cheklovi sabab qabul qilmadi/);
+assert.doesNotMatch(utilsSource, /60 daqiqalik limitidan uzun/);
 
 const manifest = fs.readFileSync(path.join(root, "CSXS", "manifest.xml"), "utf8");
 assert.match(manifest, /<Width>600<\/Width>\s*<Height>300<\/Height>/);
