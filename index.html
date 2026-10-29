@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>YT Timeline</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <main class="panel-shell">
+    <section class="action-card" aria-labelledby="downloadHeading">
+      <h2 id="downloadHeading" class="sr-only">Audio yuklash</h2>
+      <div class="action-toolbar">
+        <div id="statusBadge" class="status-badge" data-state="ready">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="statusText">Tayyor</span>
+        </div>
+        <button id="chooseFolderButton" class="folder-button" type="button" title="Saqlash papkasini o'zgartirish">
+          <span class="folder-mark" aria-hidden="true">▰</span>
+          <span class="folder-label">PAPKA</span>
+          <span id="destinationPath">Yuklamalar</span>
+          <span class="folder-chevron" aria-hidden="true">›</span>
+        </button>
+      </div>
+      <div class="input-wrap">
+        <input id="urlInput" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="YouTube havolasini kiriting..." aria-describedby="message">
+        <button id="clearUrlButton" class="icon-button" type="button" title="Havolani tozalash" aria-label="Havolani tozalash">×</button>
+      </div>
+
+      <button id="downloadButton" class="primary-button" type="button">
+        <span id="downloadButtonLabel">YUKLASH → TIMELINE</span>
+      </button>
+      <button id="cancelButton" class="secondary-button cancel-button" type="button" hidden>BEKOR QILISH</button>
+
+      <div class="progress-block" aria-live="polite">
+        <span id="progressStage" class="sr-only">Tayyor</span>
+        <div class="progress-row">
+          <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div id="progressBar" class="progress-bar"></div>
+          </div>
+          <span id="progressPercent"></span>
+        </div>
+        <p id="message" class="message"></p>
+      </div>
+    </section>
+
+    <section class="history-section" aria-labelledby="historyHeading">
+      <div class="section-heading">
+        <h2 id="historyHeading">SO'NGGI</h2>
+        <div class="section-actions">
+          <button id="openLogsButton" class="icon-text-button" type="button" title="Jurnal" aria-label="Jurnal">≡</button>
+          <button id="clearHistoryButton" class="icon-text-button" type="button" title="Tarixni tozalash" aria-label="Tarixni tozalash">×</button>
+        </div>
+      </div>
+      <div id="historyList" class="history-list"></div>
+      <p id="emptyHistory" class="empty-state">Hali audio yuklanmagan.</p>
+    </section>
+  </main>
+
+  <script src="js/CSInterface.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/logger.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/downloader.js"></script>
+  <script src="js/premiere.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

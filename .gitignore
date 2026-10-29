@@ -1,0 +1,9 @@
+downloads/*
+!downloads/.gitkeep
+logs/*
+!logs/.gitkeep
+*.part
+*.ytdl
+*.temp
+.DS_Store
+Thumbs.db
