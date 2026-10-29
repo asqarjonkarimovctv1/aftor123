@@ -23,6 +23,7 @@
           <span class="folder-chevron" aria-hidden="true">›</span>
         </button>
       </div>
+      <button id="openBrowserButton" class="secondary-button browser-button" type="button">YouTube'ni ochish</button>
       <div class="input-wrap">
         <input id="urlInput" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="YouTube havolasini kiriting..." aria-describedby="message">
         <button id="clearUrlButton" class="icon-button" type="button" title="Havolani tozalash" aria-label="Havolani tozalash">×</button>
@@ -47,13 +48,15 @@
 
     <section class="history-section" aria-labelledby="historyHeading">
       <div class="section-heading">
-        <h2 id="historyHeading">SO'NGGI</h2>
+        <h2 id="historyHeading">LOYIHA AUDIOLARI</h2>
         <div class="section-actions">
+          <button id="openDownloadsButton" class="icon-text-button" type="button" title="Loyiha yuklamalari papkasini ochish" aria-label="Loyiha yuklamalari papkasini ochish">▰</button>
           <button id="openLogsButton" class="icon-text-button" type="button" title="Jurnal" aria-label="Jurnal">≡</button>
-          <button id="clearHistoryButton" class="icon-text-button" type="button" title="Tarixni tozalash" aria-label="Tarixni tozalash">×</button>
+          <button id="clearHistoryButton" class="icon-text-button" type="button" title="Shu loyiha tarixini tozalash (fayllar saqlanadi)" aria-label="Shu loyiha tarixini tozalash">×</button>
         </div>
       </div>
-      <div id="historyList" class="history-list"></div>
+      <p id="projectName" class="project-name">Loyiha tanlanmagan</p>
+      <div id="historyList" class="history-list" tabindex="0" aria-label="Faol loyiha audiolari"></div>
       <p id="emptyHistory" class="empty-state">Hali audio yuklanmagan.</p>
     </section>
   </main>
@@ -62,6 +65,8 @@
   <script src="js/utils.js"></script>
   <script src="js/logger.js"></script>
   <script src="js/storage.js"></script>
+  <script src="js/library.js"></script>
+  <script src="js/browser.js"></script>
   <script src="js/downloader.js"></script>
   <script src="js/premiere.js"></script>
   <script src="js/app.js"></script>

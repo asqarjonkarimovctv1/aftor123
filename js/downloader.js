@@ -76,7 +76,7 @@
         if (callbacks.onMetadata) {
           callbacks.onMetadata({ id: metadata.id, title: metadata.title, duration: metadata.track_duration_sec });
         }
-        var base = self._uniqueBase(metadata.title || metadata.filename || "Samplecut audio", metadata.id);
+        var base = self._uniqueBase(metadata.title || metadata.filename || "Samplecut audio", metadata.id, job.destinationPath);
         var finalPath = base + ".mp3";
         var partialPath = finalPath + ".part";
         job.prefix = self.node.path.basename(base);
@@ -110,7 +110,11 @@
   Downloader.prototype._createDownload = function (sourceUrl, job, callbacks, attempt) {
     var self = this;
     this._throwIfCancelled(job);
-    if (callbacks.onStage) { callbacks.onStage(attempt > 1 ? "retrying" : "processing"); }
+    if (!job.apiDeadline) { job.apiDeadline = Date.now() + API_TIMEOUT_MS; }
+    var remainingMs = job.apiDeadline - Date.now();
+    if (remainingMs <= 0) { return Promise.reject(this._error("API_TIMEOUT", "Samplecut processing exceeded the total 120-second limit.")); }
+    if (callbacks.onStage) { callbacks.onStage(attempt > 1 ? "retrying" : "processing", { attempt: attempt, maxAttempts: MAX_API_ATTEMPTS }); }
+    var attemptStartedAt = Date.now();
     var payload = JSON.stringify({ url: sourceUrl, format: "mp3", response: "url" });
 
     return this._jsonRequest({
@@ -124,33 +128,51 @@
         "x-client-name": "YT Timeline",
         "accept": "application/json"
       }
-    }, payload, job).then(function (result) {
+    }, payload, job, remainingMs).then(function (result) {
+      self.logger.info("Samplecut attempt " + attempt + ": HTTP " + result.statusCode + " after " + (Date.now() - attemptStartedAt) + " ms.");
+      if (Date.now() >= job.apiDeadline) { throw self._error("API_TIMEOUT", "Samplecut processing exceeded the total 120-second limit."); }
       if (result.statusCode === 201) { return self._validateDownloadResponse(result.body); }
 
       var apiError = self._apiError(result.statusCode, result.body, result.headers);
-      if ((result.statusCode === 500 || result.statusCode === 502) && attempt < MAX_API_ATTEMPTS) {
+      if ((result.statusCode === 500 || result.statusCode === 502) && apiError.retryable && attempt < MAX_API_ATTEMPTS) {
         var delayMs = attempt === 1 ? 1000 : 2500;
+        if (Date.now() + delayMs >= job.apiDeadline) { throw apiError; }
         self.logger.info("Samplecut retryable response " + result.statusCode + "; retrying attempt " + (attempt + 1) + ".");
         return self._wait(job, delayMs).then(function () {
           return self._createDownload(sourceUrl, job, callbacks, attempt + 1);
         });
       }
       throw apiError;
+    }, function (error) {
+      self.logger.info("Samplecut attempt " + attempt + ": " + error.code + " after " + (Date.now() - attemptStartedAt) + " ms.");
+      throw error;
     });
   };
 
-  Downloader.prototype._jsonRequest = function (options, body, job) {
+  Downloader.prototype._jsonRequest = function (options, body, job, timeoutMs) {
     var self = this;
     return new Promise(function (resolve, reject) {
       var settled = false;
+      var deadlineTimer = null;
+      function fail(error) {
+        if (settled) { return; }
+        settled = true;
+        global.clearTimeout(deadlineTimer);
+        if (job.response) { job.response.destroy(); }
+        request.destroy();
+        job.request = null;
+        job.response = null;
+        reject(self._networkError(error, job));
+      }
       var request = self.node.https.request(options, function (response) {
+        if (settled) { response.destroy(); return; }
         job.response = response;
         var chunks = [];
         var size = 0;
         response.on("data", function (chunk) {
           size += chunk.length;
           if (size > MAX_JSON_BYTES) {
-            response.destroy(self._error("API_RESPONSE_TOO_LARGE", "Samplecut returned an unexpectedly large response."));
+            fail(self._error("API_RESPONSE_TOO_LARGE", "Samplecut returned an unexpectedly large response."));
             return;
           }
           chunks.push(chunk);
@@ -158,6 +180,7 @@
         response.on("end", function () {
           if (settled) { return; }
           settled = true;
+          global.clearTimeout(deadlineTimer);
           job.request = null;
           job.response = null;
           var text = self.node.Buffer.concat(chunks).toString("utf8");
@@ -168,26 +191,18 @@
           }
           resolve({ statusCode: response.statusCode, headers: response.headers || {}, body: parsed });
         });
-        response.on("error", function (error) {
-          if (settled) { return; }
-          settled = true;
-          job.request = null;
-          job.response = null;
-          reject(self._networkError(error, job));
+        response.on("error", fail);
+        response.on("aborted", function () {
+          fail(new Error("Samplecut response was interrupted."));
         });
       });
       job.request = request;
-      request.setTimeout(API_TIMEOUT_MS, function () {
-        request.destroy(self._error("API_TIMEOUT", "Samplecut did not respond within 120 seconds."));
-      });
-      request.on("error", function (error) {
-        if (settled) { return; }
-        settled = true;
-        job.request = null;
-        job.response = null;
-        reject(self._networkError(error, job));
-      });
-      request.end(body);
+      // An absolute deadline also covers DNS/TCP/TLS and a slowly trickling response.
+      deadlineTimer = global.setTimeout(function () {
+        fail(self._error("API_TIMEOUT", "Samplecut processing exceeded the total 120-second limit."));
+      }, timeoutMs || API_TIMEOUT_MS);
+      request.on("error", fail);
+      try { request.end(body); } catch (error) { fail(error); }
     });
   };
 
@@ -223,6 +238,9 @@
   Downloader.prototype._downloadUrl = function (downloadUrl, finalPath, partialPath, job, callbacks, redirectCount) {
     var self = this;
     this._throwIfCancelled(job);
+    if (!job.downloadHeaderDeadline) { job.downloadHeaderDeadline = Date.now() + API_TIMEOUT_MS; }
+    var remainingMs = job.downloadHeaderDeadline - Date.now();
+    if (remainingMs <= 0) { return Promise.reject(this._error("DOWNLOAD_TIMEOUT", "The MP3 download connection timed out.")); }
     var parsed;
     try { parsed = new this.node.url.URL(downloadUrl); }
     catch (error) { return Promise.reject(this._error("INVALID_DOWNLOAD_URL", "Samplecut returned an invalid download URL.")); }
@@ -232,6 +250,18 @@
 
     return new Promise(function (resolve, reject) {
       var settled = false;
+      var headerTimer = null;
+      function failRequest(error) {
+        if (settled) { return; }
+        settled = true;
+        global.clearTimeout(headerTimer);
+        if (job.response) { job.response.destroy(); }
+        if (job.writeStream) { job.writeStream.destroy(); job.writeStream = null; }
+        request.destroy();
+        job.request = null;
+        job.response = null;
+        reject(self._networkError(error, job));
+      }
       var request = self.node.https.request({
         hostname: API_HOST,
         port: 443,
@@ -239,6 +269,8 @@
         method: "GET",
         headers: { "accept": "audio/mpeg, application/octet-stream", "x-client-name": "YT Timeline" }
       }, function (response) {
+        global.clearTimeout(headerTimer);
+        if (settled) { response.destroy(); return; }
         job.response = response;
         if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
           response.resume();
@@ -337,18 +369,14 @@
         response.pipe(stream);
       });
       job.request = request;
+      headerTimer = global.setTimeout(function () {
+        failRequest(self._error("DOWNLOAD_TIMEOUT", "The MP3 download connection timed out."));
+      }, remainingMs);
       request.setTimeout(API_TIMEOUT_MS, function () {
-        request.destroy(self._error("DOWNLOAD_TIMEOUT", "The Samplecut MP3 download timed out after 120 seconds."));
+        failRequest(self._error("DOWNLOAD_TIMEOUT", "The Samplecut MP3 transfer stalled for 120 seconds."));
       });
-      request.on("error", function (error) {
-        if (settled) { return; }
-        settled = true;
-        job.request = null;
-        job.response = null;
-        if (job.writeStream) { job.writeStream.destroy(); job.writeStream = null; }
-        reject(self._networkError(error, job));
-      });
-      request.end();
+      request.on("error", failRequest);
+      try { request.end(); } catch (error) { failRequest(error); }
     });
   };
 
@@ -362,7 +390,7 @@
       unsupported_url: "Samplecut does not support this URL.",
       invalid_range: "Samplecut rejected the requested audio range.",
       set_not_track: "Use a single video URL, not a playlist or album.",
-      too_long: "The source is longer than Samplecut's 60-minute limit.",
+      too_long: "Samplecut rejected the source due to its duration limit.",
       extract_failed: "Samplecut could not access this video. It may be private, removed, age-restricted, or region-blocked.",
       drm: "Samplecut cannot process DRM-protected media.",
       preview_only: "Samplecut received only a preview, not the complete audio.",
@@ -380,7 +408,7 @@
 
   Downloader.prototype._networkError = function (error, job) {
     if (job && job.cancelled) { return this._error("CANCELLED", "Download cancelled."); }
-    if (error && (error.code === "API_TIMEOUT" || error.code === "DOWNLOAD_TIMEOUT" || error.code === "AUDIO_TOO_LARGE")) { return error; }
+    if (error && (error.code === "API_TIMEOUT" || error.code === "DOWNLOAD_TIMEOUT" || error.code === "AUDIO_TOO_LARGE" || error.code === "API_RESPONSE_TOO_LARGE")) { return error; }
     var output = this._error("NETWORK_ERROR", "Could not reach Samplecut. Check your internet connection.");
     output.cause = error && error.message ? error.message : "";
     return output;
@@ -400,14 +428,15 @@
     });
   };
 
-  Downloader.prototype._uniqueBase = function (title, id) {
+  Downloader.prototype._uniqueBase = function (title, id, destinationPath) {
+    destinationPath = destinationPath || this.destinationPath;
     var safeId = String(id || "audio").replace(/[^A-Za-z0-9_-]/g, "").substring(0, 16) || "audio";
     var stamp = new Date().toISOString().replace(/[-:T]/g, "").replace(/\..*$/, "");
     var stem = global.YT.Utils.sanitizeFileName(String(title || "Samplecut audio").substring(0, 70) + " [sc-" + safeId + "] " + stamp);
-    var base = this.node.path.join(this.destinationPath, stem);
+    var base = this.node.path.join(destinationPath, stem);
     var counter = 2;
     while (this.node.fs.existsSync(base + ".mp3") || this.node.fs.existsSync(base + ".mp3.part")) {
-      base = this.node.path.join(this.destinationPath, stem + " (" + counter + ")");
+      base = this.node.path.join(destinationPath, stem + " (" + counter + ")");
       counter += 1;
     }
     return base;

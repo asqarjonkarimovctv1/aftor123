@@ -10,7 +10,7 @@ $manifestPath = Join-Path $projectRoot 'CSXS\manifest.xml'
 $scriptPath = Join-Path $installerRoot 'Salos-YT-Timeline.iss'
 $hashManifestPath = Join-Path $installerRoot 'payload-files.sha256'
 $logoPath = Join-Path $installerRoot 'assets\salos-logo.png'
-$expectedVersion = '1.5.3'
+$expectedVersion = '1.6.0'
 
 foreach ($requiredPath in @($manifestPath, $scriptPath, $hashManifestPath, $logoPath)) {
     if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {

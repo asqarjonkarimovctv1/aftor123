@@ -12,7 +12,7 @@ const cssSource = fs.readFileSync(path.join(root, "css", "styles.css"), "utf8");
 
 assert.match(html, /<html lang="uz">/);
 assert.match(html, /YUKLASH → TIMELINE/);
-assert.match(html, /SO'NGGI/);
+assert.match(html, /LOYIHA AUDIOLARI/);
 assert.match(html, /class="folder-label">PAPKA</);
 assert.match(html, /class="folder-chevron"[^>]*>›</);
 assert.strictEqual(/id="metadata"|metaTitle|metaDuration|metaFile|metaSize/.test(html), false);
@@ -25,7 +25,7 @@ assert.match(cssSource, /\.progress-track\.indeterminate \.progress-bar/);
 assert.match(cssSource, /@keyframes progress-indeterminate/);
 assert.match(cssSource, /\.folder-button:hover/);
 assert.match(cssSource, /border: 1px solid #414141/);
-assert.match(appSource, /getHistory\(\)\.slice\(0, 5\)/);
+assert.match(cssSource, /overflow-y: auto/);
 assert.match(utilsSource, /Samplecut bu videoni davomiylik cheklovi sabab qabul qilmadi/);
 assert.doesNotMatch(utilsSource, /60 daqiqalik limitidan uzun/);
 

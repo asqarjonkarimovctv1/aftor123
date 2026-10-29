@@ -42,6 +42,9 @@ $requiredFiles = @(
     'js\app.js',
     'js\downloader.js',
     'js\premiere.js',
+    'js\library.js',
+    'js\browser.js',
+    'browser\dist\Salos.YouTubeBrowser.exe',
     'jsx\host.jsx'
 )
 $missingFiles = @($requiredFiles | Where-Object { -not (Test-Path -LiteralPath (Join-Path $ExtensionRoot $_) -PathType Leaf) })
@@ -58,6 +61,16 @@ $cepFlags = Get-Content -LiteralPath $manifestPath -Raw -ErrorAction SilentlyCon
 $nodeEnabled = $cepFlags -match '--enable-nodejs'
 $mixedContext = $cepFlags -match '--mixed-context'
 Write-Check 'CEP Node.js flags' ($nodeEnabled -and $mixedContext) ($(if ($nodeEnabled -and $mixedContext) { 'Node.js and mixed context are enabled' } else { 'manifest must enable Node.js and mixed context' }))
+
+$webviewAvailable = $false
+$browserExecutable = Join-Path $ExtensionRoot 'browser\dist\Salos.YouTubeBrowser.exe'
+if ($isWindowsHost -and (Test-Path -LiteralPath $browserExecutable -PathType Leaf)) {
+    try {
+        $runtimeCheck = Start-Process -FilePath $browserExecutable -ArgumentList '--check-runtime' -Wait -PassThru -WindowStyle Hidden
+        $webviewAvailable = $runtimeCheck.ExitCode -eq 0
+    } catch { $webviewAvailable = $false }
+}
+Write-Check 'WebView2 Runtime' $webviewAvailable 'Required for the separate YouTube window; install Microsoft Edge WebView2 Evergreen Runtime if missing.'
 
 $samplecutContract = $null
 try {

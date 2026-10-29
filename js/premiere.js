@@ -45,13 +45,15 @@
   };
 
   PremiereBridge.prototype.getStatus = function () { return this.call("getPremiereStatus"); };
+  PremiereBridge.prototype.getProjectInfo = function () { return this.call("getProjectInfo"); };
+  PremiereBridge.prototype.matchProjectMediaPaths = function (paths, expectedProjectPath) { return this.call("matchProjectMediaPaths", { paths: paths, expectedProjectPath: expectedProjectPath }, 30000); };
   PremiereBridge.prototype.getActiveSequenceInfo = function () { return this.call("getActiveSequenceInfo"); };
   PremiereBridge.prototype.getSequencePlayhead = function () { return this.call("getSequencePlayhead"); };
-  PremiereBridge.prototype.importAudioFile = function (filePath, expectedSequenceId) {
-    return this.call("importAudioFile", { path: filePath, expectedSequenceId: expectedSequenceId || "" }, 30000);
+  PremiereBridge.prototype.importAudioFile = function (filePath, expectedSequenceId, expectedProjectPath) {
+    return this.call("importAudioFile", { path: filePath, expectedSequenceId: expectedSequenceId || "", expectedProjectPath: expectedProjectPath || "" }, 30000);
   };
-  PremiereBridge.prototype.addAudioToTimeline = function (filePath, expectedSequenceId, trackIndex) {
-    return this.call("addAudioToTimeline", { path: filePath, expectedSequenceId: expectedSequenceId || "", trackIndex: Number(trackIndex) || 0 }, 30000);
+  PremiereBridge.prototype.addAudioToTimeline = function (filePath, expectedSequenceId, trackIndex, expectedProjectPath) {
+    return this.call("addAudioToTimeline", { path: filePath, expectedSequenceId: expectedSequenceId || "", trackIndex: Number(trackIndex) || 0, expectedProjectPath: expectedProjectPath || "" }, 30000);
   };
 
   global.YT = global.YT || {};

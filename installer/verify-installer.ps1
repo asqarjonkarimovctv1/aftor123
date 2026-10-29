@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$InstallerPath = (Join-Path $PSScriptRoot 'output\Salos-YT-Timeline-Setup-1.5.3.exe')
+    [string]$InstallerPath = (Join-Path $PSScriptRoot 'output\Salos-YT-Timeline-Setup-1.6.0.exe')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -51,7 +51,7 @@ $uninstallLog = Join-Path $resolvedTest 'uninstall.log'
 $uninstallProcess = Start-Process -FilePath $uninstallerPath -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$uninstallLog") -Wait -PassThru -WindowStyle Hidden
 if ($uninstallProcess.ExitCode -ne 0) { throw "Silent uninstall failed with exit code $($uninstallProcess.ExitCode). See $uninstallLog" }
 
-foreach ($relativePath in @('CSXS\manifest.xml', 'index.html', 'js\app.js', 'css\styles.css')) {
+foreach ($relativePath in @('CSXS\manifest.xml', 'index.html', 'js\app.js', 'css\styles.css', 'browser\dist\Salos.YouTubeBrowser.exe')) {
     if (Test-Path -LiteralPath (Join-Path $installDir $relativePath)) { throw "Plugin file remained after uninstall: $relativePath" }
 }
 foreach ($relativePath in @('downloads\preserve-test.txt', 'logs\preserve-test.txt')) {

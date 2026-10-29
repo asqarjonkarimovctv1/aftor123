@@ -92,9 +92,12 @@
     return findByPathRecursive(rootItem, normalizePath(mediaPath));
   }
 
-  function currentSequence(expectedId) {
+  function currentSequence(expectedId, expectedProjectPath) {
     var project = getProject();
     if (!project) { return { error: fail("NO_PROJECT", "Avval Premiere Pro loyihasini oching.") }; }
+    if (expectedProjectPath && normalizePath(project.path || "") !== normalizePath(expectedProjectPath)) {
+      return { error: fail("PROJECT_CHANGED", "Faol loyiha o'zgardi.") };
+    }
     var sequence = project.activeSequence;
     if (!sequence) { return { error: fail("NO_ACTIVE_SEQUENCE", "Avval sequence'ni oching yoki faollashtiring.") }; }
     var sequenceId = getSequenceId(sequence);
@@ -110,12 +113,31 @@
     return ok({ application: "Premiere Pro", projectName: String(project.name || "Nomsiz loyiha"), hasActiveSequence: !!project.activeSequence });
   }
 
+  function getProjectInfo() {
+    var project = getProject();
+    if (!project) { return fail("NO_PROJECT", "Avval Premiere Pro loyihasini oching."); }
+    return ok({ projectName: String(project.name || "Nomsiz loyiha"), projectPath: String(project.path || "") });
+  }
+
+  function matchProjectMediaPaths(payload) {
+    var project = getProject();
+    if (!project) { return fail("NO_PROJECT", "Avval loyiha oching."); }
+    if (normalizePath(project.path || "") !== normalizePath(payload.expectedProjectPath || "")) { return fail("PROJECT_CHANGED", "Faol loyiha o'zgardi."); }
+    var matches = [];
+    var paths = payload.paths || [];
+    for (var i = 0; i < paths.length; i += 1) {
+      if (findProjectItem(project.rootItem, String(paths[i]))) { matches.push(String(paths[i])); }
+    }
+    return ok({ paths: matches });
+  }
+
   function getActiveSequenceInfo() {
     var state = currentSequence("");
     if (state.error) { return state.error; }
     var audioTrackCount = getCollectionLength(state.sequence.audioTracks, "numTracks");
     var position = state.sequence.getPlayerPosition();
     return ok({
+      projectPath: String(state.project.path || ""),
       sequenceId: state.sequenceId,
       name: String(state.sequence.name || "Sequence"),
       playheadTicks: String(position.ticks),
@@ -132,7 +154,7 @@
   }
 
   function importAudioFile(payload) {
-    var state = currentSequence(payload.expectedSequenceId || "");
+    var state = currentSequence(payload.expectedSequenceId || "", payload.expectedProjectPath);
     if (state.error) { return state.error; }
     var file = File(payload.path || "");
     if (!file.exists) { return fail("FILE_NOT_FOUND", "Yuklangan audio fayli topilmadi."); }
@@ -141,6 +163,7 @@
     if (existing) {
       $._YTT_._lastAudioItem = existing;
       $._YTT_._lastAudioPath = target;
+      $._YTT_._lastAudioProject = state.project;
       return ok({ imported: false, reused: true, nodeId: String(existing.nodeId || ""), name: String(existing.name || file.name) });
     }
 
@@ -153,6 +176,7 @@
     if (!item) { return fail("IMPORT_NOT_FOUND", "Audio import qilindi, lekin Project panelida aniqlanmadi."); }
     $._YTT_._lastAudioItem = item;
     $._YTT_._lastAudioPath = target;
+    $._YTT_._lastAudioProject = state.project;
     return ok({ imported: true, reused: false, nodeId: String(item.nodeId || ""), name: String(item.name || file.name) });
   }
 
@@ -235,14 +259,14 @@
   }
 
   function addAudioToTimeline(payload) {
-    var state = currentSequence(payload.expectedSequenceId || "");
+    var state = currentSequence(payload.expectedSequenceId || "", payload.expectedProjectPath);
     if (state.error) { return state.error; }
 
     var file = File(payload.path || "");
     if (!file.exists) { return fail("FILE_NOT_FOUND", "Yuklangan audio fayli topilmadi."); }
     var targetPath = normalizePath(file.fsName);
     var item = null;
-    if ($._YTT_._lastAudioItem && $._YTT_._lastAudioPath === targetPath) { item = $._YTT_._lastAudioItem; }
+    if ($._YTT_._lastAudioItem && $._YTT_._lastAudioPath === targetPath && $._YTT_._lastAudioProject === state.project) { item = $._YTT_._lastAudioItem; }
     if (!item) { item = findProjectItem(state.project.rootItem, file.fsName); }
     if (!item) { return fail("NOT_IMPORTED", "Timeline'ga qo'shishdan oldin audioni loyihaga import qiling."); }
 
@@ -291,6 +315,7 @@
   }
 
   $._YTT_.getPremiereStatus = getPremiereStatus;
+  $._YTT_.getProjectInfo = getProjectInfo;
   $._YTT_.getActiveSequenceInfo = getActiveSequenceInfo;
   $._YTT_.getSequencePlayhead = getSequencePlayhead;
   $._YTT_.importAudioFile = importAudioFile;
@@ -301,6 +326,8 @@
       var request = parseRequest(encodedRequest);
       var payload = request.payload || {};
       if (request.action === "getPremiereStatus") { return getPremiereStatus(); }
+      if (request.action === "getProjectInfo") { return getProjectInfo(); }
+      if (request.action === "matchProjectMediaPaths") { return matchProjectMediaPaths(payload); }
       if (request.action === "getActiveSequenceInfo") { return getActiveSequenceInfo(); }
       if (request.action === "getSequencePlayhead") { return getSequencePlayhead(); }
       if (request.action === "importAudioFile") { return importAudioFile(payload); }

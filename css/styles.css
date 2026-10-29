@@ -172,6 +172,7 @@ input:focus { border-color: #777; }
 }
 
 .primary-button:disabled, .secondary-button:disabled { cursor: default; opacity: .42; }
+.browser-button { height: 27px; flex: 0 0 27px; font-size: 9px; color: #d7d7d7; }
 
 .cancel-button {
   width: 100%;
@@ -277,10 +278,20 @@ input:focus { border-color: #777; }
 .text-button:hover, .icon-text-button:hover { color: #bbb; }
 
 .history-list {
-  display: grid;
+  display: block;
   min-height: 0;
-  overflow: hidden;
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-color: #555 #242424;
+  scrollbar-width: thin;
 }
+
+.history-list::-webkit-scrollbar { width: 5px; }
+.history-list::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+.history-list::-webkit-scrollbar-track { background: #242424; }
+.history-list:focus { outline: 1px solid #555; outline-offset: -1px; }
+.project-name { flex: 0 0 auto; margin: 5px 0 8px; color: #aaa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
 
 .history-item {
   display: grid;

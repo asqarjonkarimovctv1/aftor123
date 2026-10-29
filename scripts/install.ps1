@@ -20,6 +20,18 @@ if ($env:OS -ne 'Windows_NT') { throw 'YT Timeline supports Windows 10/11 only.'
 $manifestPath = Join-Path $SourceRoot 'CSXS\manifest.xml'
 Assert-File $manifestPath 'CEP manifest'
 Assert-File (Join-Path $SourceRoot 'index.html') 'Panel entry point'
+Assert-File (Join-Path $SourceRoot 'browser\dist\Salos.YouTubeBrowser.exe') 'Windows YouTube browser (run browser\build.ps1 first)'
+$payloadManifest = Join-Path $SourceRoot 'installer\payload-files.sha256'
+Assert-File $payloadManifest 'Payload checksum manifest'
+foreach ($line in Get-Content -LiteralPath $payloadManifest) {
+    if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith('#')) { continue }
+    if ($line -notmatch '^([A-Fa-f0-9]{64})\s{2}(.+)$') { throw "Invalid payload checksum entry: $line" }
+    $expectedHash = $Matches[1].ToUpperInvariant()
+    $relativePath = $Matches[2]
+    $payloadPath = Join-Path $SourceRoot $relativePath
+    Assert-File $payloadPath $relativePath
+    if ((Get-FileHash -LiteralPath $payloadPath -Algorithm SHA256).Hash -ne $expectedHash) { throw "Payload checksum mismatch: $relativePath" }
+}
 
 Write-Host "Installing YT Timeline to:`n$DestinationRoot" -ForegroundColor Cyan
 New-Item -ItemType Directory -Path $DestinationRoot -Force | Out-Null
@@ -31,6 +43,8 @@ foreach ($entry in $entries) {
         Copy-Item -LiteralPath $source -Destination $DestinationRoot -Recurse -Force
     }
 }
+New-Item -ItemType Directory -Path (Join-Path $DestinationRoot 'browser\dist') -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $SourceRoot 'browser\dist\Salos.YouTubeBrowser.exe') -Destination (Join-Path $DestinationRoot 'browser\dist') -Force
 New-Item -ItemType Directory -Path (Join-Path $DestinationRoot 'downloads') -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $DestinationRoot 'logs') -Force | Out-Null
 
@@ -53,4 +67,5 @@ if ($EnableDebugMode) {
 Write-Host "`nInstallation complete." -ForegroundColor Green
 Write-Host '1. Fully close and restart Premiere Pro.'
 Write-Host '2. Open Window > Extensions (Legacy) > YT Timeline (menu wording varies by version).'
-Write-Host '3. Open a project and activate the target sequence.'
+Write-Host '3. Open and save a project, then activate the target sequence.'
+Write-Host '4. The YouTube window requires Microsoft Edge WebView2 Runtime (separate from the included .NET runtime).'

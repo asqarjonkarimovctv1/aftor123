@@ -61,11 +61,11 @@ const sequence = {
 
 const rootItem = {
   children: { 0: item, numItems: 1 },
-  findItemsMatchingMediaPath() { nativeSearches += 1; return [item]; }
+  findItemsMatchingMediaPath(value) { nativeSearches += 1; return String(value).toLowerCase() === mediaPath.toLowerCase() ? [item] : []; }
 };
 
 global.app = {
-  project: { name: "Demo", rootItem, activeSequence: sequence, importFiles() { return true; } },
+  project: { name: "Demo", path: "C:\\Projects\\Demo.prproj", rootItem, activeSequence: sequence, importFiles() { return true; } },
   enableQE() {}
 };
 
@@ -114,5 +114,17 @@ assert.strictEqual(newTrack.data.trackName, "A4");
 assert.strictEqual(newTrack.data.createdTrack, true);
 assert.strictEqual(audioTracks.numTracks, 4);
 assert.strictEqual(sequence.videoTracks.numTracks, 1);
+
+assert.strictEqual(call("getProjectInfo").data.projectPath, "C:\\Projects\\Demo.prproj");
+assert.strictEqual(call("getActiveSequenceInfo").data.projectPath, "C:\\Projects\\Demo.prproj");
+const expectedProjectPath = app.project.path;
+assert.deepStrictEqual(call("matchProjectMediaPaths", { expectedProjectPath, paths: [mediaPath, "C:\\Other\\unrelated.mp3"] }).data.paths, [mediaPath]);
+app.project.path = "C:\\Projects\\Other.prproj";
+const trackCountBefore = audioTracks.numTracks;
+assert.strictEqual(call("importAudioFile", { path: mediaPath, expectedSequenceId: "seq-1", expectedProjectPath }).code, "PROJECT_CHANGED");
+assert.strictEqual(call("addAudioToTimeline", { path: mediaPath, expectedSequenceId: "seq-1", expectedProjectPath }).code, "PROJECT_CHANGED");
+assert.strictEqual(audioTracks.numTracks, trackCountBefore);
+app.project = { path: expectedProjectPath, rootItem: { children: { numItems: 0 } }, activeSequence: sequence };
+assert.strictEqual(call("addAudioToTimeline", { path: mediaPath, expectedSequenceId: "seq-1", expectedProjectPath }).code, "NOT_IMPORTED", "a reopened project must not reuse a cached ProjectItem from the previous project instance");
 
 console.log("PASS host placement: lowest free track, cached media lookup, verified new audio track");

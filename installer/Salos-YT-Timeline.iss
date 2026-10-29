@@ -1,5 +1,5 @@
 #define AppName "YT Timeline"
-#define AppVersion "1.5.3"
+#define AppVersion "1.6.0"
 #define AppPublisher "Salos"
 #define SalosURL "https://t.me/Salos_plagins_bot"
 #define ExtensionId "com.yttimeline.premiere"
@@ -89,6 +89,7 @@ Source: "..\assets\*"; DestDir: "{app}\assets"; Flags: ignoreversion recursesubd
 Source: "..\index.html"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\.debug"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\browser\dist\Salos.YouTubeBrowser.exe"; DestDir: "{app}\browser\dist"; Flags: ignoreversion
 Source: "assets\salos-logo.png"; Flags: dontcopy
 
 [Dirs]
